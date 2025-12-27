@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Keys PRO - Free Fire</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+body{
+  font-family:Roboto,sans-serif;
+  background:linear-gradient(135deg,#eef2f3,#d9e4ec);
+  margin:0;
+  padding:0;
+}
+.container{
+  max-width:480px;
+  margin:auto;
+  padding:20px;
+}
+.card{
+  background:#fff;
+  padding:25px;
+  border-radius:14px;
+  box-shadow:0 10px 25px rgba(0,0,0,.1);
+  text-align:center;
+}
+button{
+  background:#43a047;
+  color:#fff;
+  border:none;
+  padding:12px 20px;
+  font-size:16px;
+  font-weight:bold;
+  border-radius:8px;
+  cursor:pointer;
+  margin-top:15px;
+}
+button:hover{background:#388e3c}
+#progressBarContainer{
+  width:100%;
+  height:20px;
+  background:#ddd;
+  border-radius:10px;
+  margin-top:20px;
+  overflow:hidden;
+}
+#progressBar{
+  width:0%;
+  height:100%;
+  background:#4caf50;
+  border-radius:10px;
+  transition: width 0.2s;
+}
+#keyDisplay{
+  margin-top:20px;
+  font-weight:bold;
+  font-size:18px;
+  word-break:break-all;
+}
+#copyBtn{
+  margin-top:10px;
+  background:#1976d2;
+}
+#copyBtn:hover{
+  background:#1565c0;
+}
+.telegram{
+  margin-top:15px;
+  display:block;
+  font-size:14px;
+  color:#0077cc;
+  text-decoration:none;
+}
+select{
+  padding:10px;
+  margin-top:10px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  font-size:14px;
+  width:100%;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="card">
+    <h2>Generador de Keys</h2>
+
+    <select id="game">
+      <option value="Free Fire" selected>Free Fire</option>
+      <!-- Puedes agregar más juegos aquí -->
+    </select>
+
+    <button onclick="startGeneration()">GENERAR KEY</button>
+
+    <div id="progressBarContainer">
+      <div id="progressBar"></div>
+    </div>
+
+    <div id="keyDisplay"></div>
+    <button id="copyBtn" onclick="copyKey()">COPIAR KEY</button>
+
+    <a href="https://t.me/samitoteam" target="_blank" class="telegram">Contacta en Telegram</a>
+  </div>
+</div>
+
+<script>
+const firebaseConfig={
+  apiKey:"AIzaSyAWshu44Sj6__O8ao3_NmDcUaD2-KVcFBo",
+  authDomain:"consola-monitor.firebaseapp.com",
+  databaseURL:"https://consola-monitor-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"consola-monitor"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+let currentKey="";
+
+function startGeneration(){
+  currentKey="";
+  const progressBar=document.getElementById("progressBar");
+  const keyDisplay=document.getElementById("keyDisplay");
+  keyDisplay.innerText="";
+  progressBar.style.width="0%";
+
+  let progress=0;
+  const interval=setInterval(()=>{
+    progress+=2; // dura aproximadamente 10 segundos
+    if(progress>100) progress=100;
+    progressBar.style.width=progress+"%";
+
+    if(progress>=100){
+      clearInterval(interval);
+      generateKey();
+    }
+  },200);
+}
+
+function generateKey(){
+  const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  currentKey="FF-";
+  for(let i=0;i<16;i++) currentKey+=chars[Math.floor(Math.random()*chars.length)];
+
+  // Guardar en Firebase como pendiente
+  const now=Date.now();
+  db.ref("keys").push({
+    key:currentKey,
+    game:document.getElementById("game").value,
+    durationDays:1,
+    status:"pendiente",
+    createdAt:now,
+    expiresAt:now+24*60*60*1000,
+    country:"-",
+    ip:"-",
+    device:"mobile"
+  });
+
+  document.getElementById("keyDisplay").innerText=currentKey;
+}
+
+// Copiar key al portapapeles
+function copyKey(){
+  if(currentKey===""){alert("Genera primero la key");return;}
+  navigator.clipboard.writeText(currentKey).then(()=>{
+    alert("Key copiada al portapapeles");
+  });
+}
+</script>
+
+</body>
+</html>
