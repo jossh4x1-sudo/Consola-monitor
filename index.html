@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Consola PRO Móvil</title>
-
+<title>KeyGen + Consola PRO</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -14,88 +13,104 @@
 <style>
 body{
   font-family:Roboto,sans-serif;
+  background:linear-gradient(135deg,#eef2f3,#d9e4ec);
   margin:0;
   padding:0;
-  background:#f0f2f5;
 }
 .container{
-  max-width:480px;
+  max-width:600px;
   margin:auto;
-  padding:15px;
+  padding:20px;
 }
 .card{
   background:#fff;
-  border-radius:12px;
-  padding:15px;
-  margin-bottom:15px;
-  box-shadow:0 5px 15px rgba(0,0,0,0.1);
-}
-h2{
-  margin-bottom:15px;
+  padding:25px;
+  border-radius:14px;
+  box-shadow:0 10px 25px rgba(0,0,0,.1);
   text-align:center;
-  color:#333;
-}
-input,button,select{
-  width:100%;
-  padding:10px;
-  margin-top:8px;
-  border-radius:6px;
-  border:1px solid #ccc;
-  font-size:14px;
+  margin-bottom:20px;
 }
 button{
-  font-weight:bold;
-  cursor:pointer;
-  border:none;
-}
-.btn-success{
   background:#43a047;
   color:#fff;
-}
-.btn-danger{
-  background:#e53935;
-  color:#fff;
-}
-.status{
-  padding:5px 8px;
-  border-radius:6px;
+  border:none;
+  padding:12px 20px;
+  font-size:16px;
   font-weight:bold;
-  color:#fff;
-  display:inline-block;
-  margin-bottom:5px;
+  border-radius:8px;
+  cursor:pointer;
+  margin-top:15px;
 }
+button:hover{background:#388e3c}
+#progressBarContainer{
+  width:100%;
+  height:20px;
+  background:#ddd;
+  border-radius:10px;
+  margin-top:20px;
+  overflow:hidden;
+}
+#progressBar{
+  width:0%;
+  height:100%;
+  background:#4caf50;
+  border-radius:10px;
+  transition: width 0.2s;
+}
+#keyDisplay{
+  margin-top:20px;
+  font-weight:bold;
+  font-size:18px;
+  word-break:break-all;
+}
+#copyBtn{
+  margin-top:10px;
+  background:#1976d2;
+}
+#copyBtn:hover{background:#1565c0;}
+.status{padding:5px 8px;border-radius:6px;font-weight:bold;color:#fff;display:inline-block;margin-bottom:5px;}
 .status-pendiente{background:#ffa500;}
 .status-activa{background:#43a047;}
 .status-expirada{background:#e53935;}
 .status-revocada{background:#888;}
-.key-card{
-  border:1px solid #ddd;
-  padding:10px;
-  border-radius:8px;
-  margin-bottom:10px;
-  background:#fafafa;
-}
+.key-card{border:1px solid #ddd;padding:10px;border-radius:8px;margin-bottom:10px;background:#fafafa;text-align:left;}
+input,select{width:100%;padding:10px;margin-top:8px;border-radius:6px;border:1px solid #ccc;font-size:14px;}
 </style>
 </head>
-
 <body>
 
 <div class="container">
 
-<!-- LOGIN -->
-<div class="card" id="loginBox">
-  <h2>Acceso Consola PRO</h2>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Contraseña">
-  <button class="btn-success" onclick="login()">ENTRAR</button>
-</div>
+  <!-- LOGIN -->
+  <div class="card" id="loginBox">
+    <h2>Acceso Consola PRO</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Contraseña">
+    <button onclick="login()">ENTRAR</button>
+  </div>
 
-<!-- PANEL -->
-<div id="panel" style="display:none">
-  <h2>Consola de Keys</h2>
-  <div id="keysContainer"></div>
-</div>
+  <!-- PANEL PRINCIPAL -->
+  <div id="panel" style="display:none">
 
+    <!-- GENERADOR DE KEYS -->
+    <div class="card">
+      <h2>Generador de Keys</h2>
+      <select id="game">
+        <option value="Free Fire" selected>Free Fire</option>
+      </select>
+      <button onclick="startGeneration()">GENERAR KEY</button>
+      <div id="progressBarContainer"><div id="progressBar"></div></div>
+      <div id="keyDisplay"></div>
+      <button id="copyBtn" onclick="copyKey()">COPIAR KEY</button>
+    </div>
+
+    <!-- CONSOLA DE KEYS -->
+    <div class="card">
+      <h2>Consola de Keys</h2>
+      <div id="keysContainer"></div>
+    </div>
+
+  </div>
 </div>
 
 <script>
@@ -105,11 +120,13 @@ const firebaseConfig = {
   databaseURL: "https://consola-monitor-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "consola-monitor"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
+let currentKey = "";
+
+// --- LOGIN ---
 function login(){
   const email = document.getElementById("email").value;
   const pass  = document.getElementById("password").value;
@@ -123,25 +140,89 @@ function login(){
   .catch(e=>alert(e.message));
 }
 
+// --- CARGAR KEYS ---
 function loadKeys(){
   db.ref("keys").on("value", snap=>{
     const data = snap.val() || {};
     const container = document.getElementById("keysContainer");
     container.innerHTML = "";
-
     for(let id in data){
       const k = data[id];
+      const date = new Date(k.createdAt);
+      const hora = date.toLocaleString();
       const div = document.createElement("div");
       div.className = "key-card";
       div.innerHTML = `
         <b>KEY:</b> ${k.key}<br>
         <b>Estado:</b> <span class="status status-${k.status}">${k.status}</span><br>
+        <b>Juego:</b> ${k.game}<br>
+        <b>Hora:</b> ${hora}<br>
+        <b>IP:</b> ${k.ip || "N/A"}<br>
         <b>País:</b> ${k.country || "N/A"}<br>
-        <b>IP:</b> ${k.ip || "N/A"}
+        <b>Ubicación:</b> ${k.location || "N/A"}
       `;
       container.appendChild(div);
     }
   });
+}
+
+// --- GENERAR KEY ---
+function startGeneration(){
+  currentKey="";
+  const progressBar=document.getElementById("progressBar");
+  const keyDisplay=document.getElementById("keyDisplay");
+  keyDisplay.innerText="";
+  progressBar.style.width="0%";
+
+  let progress=0;
+  const interval=setInterval(()=>{
+    progress+=2;
+    if(progress>100) progress=100;
+    progressBar.style.width=progress+"%";
+    if(progress>=100){
+      clearInterval(interval);
+      generateKey();
+    }
+  },200);
+}
+
+// --- GENERAR KEY CON INFO ---
+function generateKey(){
+  const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  currentKey="FF-";
+  for(let i=0;i<16;i++) currentKey+=chars[Math.floor(Math.random()*chars.length)];
+
+  // Obtener ubicación/IP
+  let ip="-", country="-", location="-";
+  fetch("https://ipapi.co/json/").then(res=>res.json()).then(data=>{
+    ip = data.ip || "-";
+    country = data.country_name || "-";
+    location = `${data.city || "-"}, ${data.region || "-"}`
+    saveKey(ip,country,location);
+  }).catch(()=>saveKey(ip,country,location));
+
+  document.getElementById("keyDisplay").innerText=currentKey;
+}
+
+function saveKey(ip, country, location){
+  const now = Date.now();
+  db.ref("keys").push({
+    key: currentKey,
+    game: document.getElementById("game").value,
+    status: "pendiente",
+    createdAt: now,
+    expiresAt: now+24*60*60*1000,
+    ip,
+    country,
+    location,
+    device: "mobile"
+  });
+}
+
+// --- COPIAR KEY ---
+function copyKey(){
+  if(currentKey===""){alert("Genera primero la key");return;}
+  navigator.clipboard.writeText(currentKey).then(()=>alert("Key copiada al portapapeles"));
 }
 </script>
 
