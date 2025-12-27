@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consola PRO Móvil</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+body{
+  font-family:Roboto,sans-serif;
+  margin:0;
+  padding:0;
+  background:#f0f2f5;
+}
+.container{
+  max-width:480px;
+  margin:auto;
+  padding:15px;
+}
+.card{
+  background:#fff;
+  border-radius:12px;
+  padding:15px;
+  margin-bottom:15px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.1);
+}
+h2{
+  margin-bottom:15px;
+  text-align:center;
+  color:#333;
+}
+input,button,select{
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  font-size:14px;
+}
+button{
+  font-weight:bold;
+  cursor:pointer;
+  border:none;
+}
+.btn-success{
+  background:#43a047;
+  color:#fff;
+}
+.btn-danger{
+  background:#e53935;
+  color:#fff;
+}
+.status{
+  padding:5px 8px;
+  border-radius:6px;
+  font-weight:bold;
+  color:#fff;
+  display:inline-block;
+  margin-bottom:5px;
+}
+.status-pendiente{background:#ffa500;}
+.status-activa{background:#43a047;}
+.status-expirada{background:#e53935;}
+.status-revocada{background:#888;}
+.key-card{
+  border:1px solid #ddd;
+  padding:10px;
+  border-radius:8px;
+  margin-bottom:10px;
+  background:#fafafa;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div class="card" id="loginBox">
+  <h2>Acceso Consola PRO</h2>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Contraseña">
+  <button class="btn-success" onclick="login()">ENTRAR</button>
+</div>
+
+<!-- PANEL -->
+<div id="panel" style="display:none">
+  <h2>Consola de Keys</h2>
+  <div id="keysContainer"></div>
+</div>
+
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAWshu44Sj6__O8ao3_NmDcUaD2-KVcFBo",
+  authDomain: "consola-monitor.firebaseapp.com",
+  databaseURL: "https://consola-monitor-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "consola-monitor"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+function login(){
+  const email = document.getElementById("email").value;
+  const pass  = document.getElementById("password").value;
+
+  auth.signInWithEmailAndPassword(email, pass)
+  .then(()=>{
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("panel").style.display="block";
+    loadKeys();
+  })
+  .catch(e=>alert(e.message));
+}
+
+function loadKeys(){
+  db.ref("keys").on("value", snap=>{
+    const data = snap.val() || {};
+    const container = document.getElementById("keysContainer");
+    container.innerHTML = "";
+
+    for(let id in data){
+      const k = data[id];
+      const div = document.createElement("div");
+      div.className = "key-card";
+      div.innerHTML = `
+        <b>KEY:</b> ${k.key}<br>
+        <b>Estado:</b> <span class="status status-${k.status}">${k.status}</span><br>
+        <b>País:</b> ${k.country || "N/A"}<br>
+        <b>IP:</b> ${k.ip || "N/A"}
+      `;
+      container.appendChild(div);
+    }
+  });
+}
+</script>
+
+</body>
+</html>
